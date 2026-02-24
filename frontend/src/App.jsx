@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { tweetApi } from './utils/api';
+import { supabase } from './utils/supabase';
+import Auth from './components/Auth';
 import './App.css';
 
 // Reusable Tweet Component
 const Tweet = ({ id, user_id, content, like_count, comment_count, created_at, user_liked, onLike }) => {
-  const time = new Date(created_at).toLocaleDateString();
+  const time = created_at ? new Date(created_at).toLocaleDateString() : 'N/A';
+  const displayId = user_id ? String(user_id).slice(0, 8) : 'unknown';
   return (
     <div className="tweet-item" style={{
       display: 'flex',
@@ -15,18 +18,18 @@ const Tweet = ({ id, user_id, content, like_count, comment_count, created_at, us
       cursor: 'pointer',
       transition: 'var(--transition-fast)'
     }}>
-      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user_id}`} alt="Avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#333' }} />
+      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayId}`} alt="Avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#333' }} />
       <div style={{ flexGrow: 1 }}>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem' }}>
-          <span style={{ fontWeight: 700 }}>User_{user_id.slice(0, 8)}</span>
-          <span style={{ color: 'var(--text-dim)' }}>@{user_id.slice(0, 8)} · {time}</span>
+          <span style={{ fontWeight: 700 }}>User_{displayId}</span>
+          <span style={{ color: 'var(--text-dim)' }}>@{displayId} · {time}</span>
         </div>
         <div style={{ marginBottom: '1rem', lineHeight: '1.4' }}>{content}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-dim)', maxWidth: '425px', marginTop: '0.75rem' }}>
-          <button className="interaction-btn"><span>💬</span> {comment_count}</button>
+          <button className="interaction-btn"><span>💬</span> {comment_count || 0}</button>
           <button className="interaction-btn"><span>🔁</span> 0</button>
           <button className="interaction-btn" onClick={(e) => { e.stopPropagation(); onLike(id); }} style={{ color: user_liked ? 'var(--error)' : 'inherit' }}>
-            <span>{user_liked ? '❤️' : '🤍'}</span> {like_count}
+            <span>{user_liked ? '❤️' : '🤍'}</span> {like_count || 0}
           </button>
           <button className="interaction-btn"><span>📊</span> 0</button>
         </div>
@@ -40,13 +43,17 @@ const Home = () => {
   const [tweets, setTweets] = useState([]);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchTweets = async () => {
     try {
       const res = await tweetApi.getTweets();
-      setTweets(res.data.results || res.data);
+      const data = res.data.results || res.data;
+      setTweets(Array.isArray(data) ? data : []);
+      setError(null);
     } catch (err) {
       console.error("Failed to fetch tweets", err);
+      setError(err.response?.data?.detail || err.message || "Failed to fetch tweets");
     } finally {
       setLoading(false);
     }
@@ -64,6 +71,7 @@ const Home = () => {
       fetchTweets();
     } catch (err) {
       console.error("Failed to post tweet", err);
+      alert(err.response?.data?.detail || "Failed to post");
     }
   };
 
@@ -97,8 +105,12 @@ const Home = () => {
         </div>
       </div>
       <div className="feed">
+        {error && <div style={{ padding: '1rem', color: 'var(--error)', background: 'rgba(244, 33, 46, 0.1)', margin: '1rem', borderRadius: '8px' }}>
+          <strong>Error:</strong> {error}
+        </div>}
         {loading ? <p style={{ padding: '1rem' }}>Loading flights...</p> :
-         tweets.map(tweet => <Tweet key={tweet.id} {...tweet} onLike={handleLike} />)}
+         (tweets.length > 0 ? tweets.map(tweet => <Tweet key={tweet.id} {...tweet} onLike={handleLike} />) :
+          !error && <p style={{ padding: '1rem', color: 'var(--text-dim)' }}>No tweets yet. Be the first to take flight!</p>)}
       </div>
     </>
   );
@@ -119,6 +131,77 @@ const SidebarItem = ({ to, icon, label }) => {
 };
 
 function App() {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) syncUserWithBackend();
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) syncUserWithBackend();
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const syncUserWithBackend = async () => {
+    try {
+      await tweetApi.syncUser();
+    } catch (err) {
+      console.error("Failed to sync user with backend", err);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        width: '100vw',
+        backgroundColor: 'var(--bg-color)',
+        color: 'white',
+        gap: '2rem'
+      }}>
+        <div style={{
+          fontSize: '5rem',
+          animation: 'pulse 2s infinite ease-in-out'
+        }}>🐦</div>
+        <div style={{
+          fontSize: '1.5rem',
+          fontWeight: 600,
+          letterSpacing: '2px',
+          textTransform: 'uppercase',
+          opacity: 0.8
+        }}>
+          SkyBird
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.5; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (!session) return <Auth />;
+
   return (
     <Router>
       <div className="app-container">
@@ -136,7 +219,7 @@ function App() {
             <SidebarItem to="/profile" icon="👤" label="Profile" />
           </nav>
           <div style={{ padding: '1rem' }}>
-            <button className="btn-primary" style={{ width: '100%' }}>Post</button>
+            <button onClick={handleLogout} className="nav-item" style={{ width: '100%', color: 'var(--text-dim)', fontSize: '0.9rem' }}>🚪 Logout</button>
           </div>
         </aside>
 
@@ -147,6 +230,7 @@ function App() {
             <Route path="/notifications" element={<div className="page-header"><h2>Notifications</h2></div>} />
             <Route path="/messages" element={<div className="page-header"><h2>Messages</h2></div>} />
             <Route path="/profile" element={<div className="page-header"><h2>Profile</h2></div>} />
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
 
