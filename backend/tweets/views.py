@@ -1,5 +1,6 @@
 import uuid
 from django.db import transaction, IntegrityError
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -99,15 +100,15 @@ class LikeTweetView(APIView):
                 # Unlike
                 like.delete()
                 Tweet.objects.filter(id=tweet.id).update(
-                    like_count=max(tweet.like_count - 1, 0)
+                    like_count=F('like_count') - 1
                 )
                 tweet.refresh_from_db()
-                return Response({'liked': False, 'like_count': tweet.like_count})
+                return Response({'liked': False, 'like_count': max(tweet.like_count, 0)})
             else:
                 # Like
                 try:
                     Like.objects.create(id=uuid.uuid4(), user_id=user_id, tweet=tweet)
-                    Tweet.objects.filter(id=tweet.id).update(like_count=tweet.like_count + 1)
+                    Tweet.objects.filter(id=tweet.id).update(like_count=F('like_count') + 1)
                     tweet.refresh_from_db()
                     return Response({'liked': True, 'like_count': tweet.like_count})
                 except IntegrityError:
@@ -144,6 +145,6 @@ class CommentListCreateView(APIView):
                 tweet=tweet,
                 user_id=request.user.user_id
             )
-            Tweet.objects.filter(id=tweet.id).update(comment_count=tweet.comment_count + 1)
+            Tweet.objects.filter(id=tweet.id).update(comment_count=F('comment_count') + 1)
 
         return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)

@@ -37,16 +37,29 @@ class SupabaseJWTAuthentication(BaseAuthentication):
             return None
 
         try:
+            # Supabase often provides secrets as Base64 strings
+            secret = settings.SUPABASE_JWT_SECRET
+            try:
+                import base64
+                # Check if it looks like base64 and decode if so
+                # PyJWT can handle both bytes and strings, but we need the raw bytes if it's base64
+                if len(secret) % 4 == 0 and any(c in secret for c in '+/='):
+                    secret = base64.b64decode(secret)
+            except Exception:
+                pass
+
             payload = jwt.decode(
                 token,
-                settings.SUPABASE_JWT_SECRET,
+                secret,
                 algorithms=['HS256'],
                 options={"verify_exp": True},
             )
         except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Token has expired.')
+            raise AuthenticationFailed('Your session has expired. Please log in again.')
         except jwt.InvalidTokenError as e:
-            raise AuthenticationFailed(f'Invalid token: {e}')
+            raise AuthenticationFailed(f'Invalid authentication token: {e}')
+        except Exception as e:
+            raise AuthenticationFailed(f'Authentication error: {str(e)}')
 
         user_id = payload.get('sub')
         if not user_id:
