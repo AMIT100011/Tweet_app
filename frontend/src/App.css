@@ -1,0 +1,126 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  overflow-y: scroll;
+}
+
+#root {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.app-container {
+  display: flex;
+  width: 100%;
+  max-width: 1250px;
+  min-height: 100vh;
+}
+
+main {
+  flex-grow: 1;
+  border-left: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  max-width: 600px;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 275px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.widgets {
+  flex-grow: 1;
+  width: 350px;
+  padding: 1rem 2rem;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  transition: var(--transition-fast);
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  border-radius: 9999px;
+  padding: 0.85rem 2rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(29, 155, 240, 0.2);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-primary:hover {
+  background-color: #1a8cd8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(29, 155, 240, 0.3);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 9999px;
+  font-size: 1.2rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tweet-item {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.tweet-item:hover {
+  background-color: #080808;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  padding: 1rem;
+  position: sticky;
+  top: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 10;
+}
+
+.page-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+main {
+  flex-grow: 1;
+  max-width: 600px;
+  min-height: 100vh;
+}

@@ -1,0 +1,16 @@
+:root {
+  --primary: #1d9bf0;
+  --secondary: #71767b;
+  --bg-color: #000000;
+  --bg-secondary: #16181c;
+  --text-main: #e7e9ea;
+  --text-dim: #71767b;
+  --border-color: #2f3336;
+  --hover-bg: rgba(29, 155, 240, 0.1);
+  --error: #f4212e;
+  --success: #00ba7c;
+
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
